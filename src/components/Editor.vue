@@ -23,6 +23,7 @@ const root = ref(undefined)
 const isDrawing = ref(false)
 const tempGroupAllShape = ref({} as { [K: string]: any })
 const selectingShapes = ref([] as ShapeModel<Group | any, ShapeConfig>[] | undefined)
+const currentStartEraseIndex = ref(0)
 
 onMounted(() => {
   editor = new Pikaso({
@@ -54,7 +55,8 @@ const shortCut = () => ({
   groups: editor.board.groups,
   allShapes: editor.board.shapes.filter((i) => i.type !== 'group'),
   pencil: editor.shapes.pencil,
-  polygon
+  polygon,
+  polygon2
 })
 
 const createGroupName = (groupName = '', id = '') => `${groupName}_${id}`
@@ -71,7 +73,7 @@ const stopDrawing = () => {
   isDrawing.value = false
 }
 
-const onErase = (_e, groupName = ERASER_GROUP) => {
+const onErase = (_e: unknown, groupName = ERASER_GROUP) => {
   const selectedShape = selectingShapes.value?.[0]
   if (!selectedShape) {
     stopDrawing()
@@ -100,6 +102,7 @@ const onErase = (_e, groupName = ERASER_GROUP) => {
     }
     groups.ungroup(selectedGroupName)
     selectingShapes.value = selectedGroups
+    currentStartEraseIndex.value = allShapes.length - 1
 
     pencil.draw({
       stroke: 'blue',
@@ -108,10 +111,15 @@ const onErase = (_e, groupName = ERASER_GROUP) => {
     isDrawing.value = true
   } else {
     pencil?.stopDrawing()
-    attachGroup(selectedGroupName, [
-      ...((selectingShapes.value || []) as any),
-      allShapes[allShapes.length - 1]
-    ])
+
+    const newLines = [] as typeof allShapes
+    let countingShapeIndex = allShapes.length - 1
+    while (countingShapeIndex > currentStartEraseIndex.value) {
+      newLines.push(allShapes[countingShapeIndex])
+      countingShapeIndex--
+    }
+
+    attachGroup(selectedGroupName, [...((selectingShapes.value || []) as any), ...newLines])
   }
 }
 
