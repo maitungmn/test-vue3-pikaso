@@ -10,7 +10,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, reactive, watch } from 'vue'
 import Pikaso, { PolygonModel, ShapeModel, type Group, type ShapeConfig } from 'pikaso'
 
 let editor: Pikaso
@@ -18,12 +18,22 @@ let polygon: PolygonModel
 let polygon2: PolygonModel
 
 const ERASER_GROUP = 'ERASER_GROUP'
+const EVENT_NAMES = {
+  MOUSEDOWN_TOUCHSTART: 'mousedown touchstart',
+  MOUSEUP_TOUCHEND: 'mouseup touchend',
+  MOUSEMOVE: 'mousemove'
+}
 
 const root = ref(undefined)
 const isDrawing = ref(false)
+const isDragging = ref(false)
 const tempGroupAllShape = ref({} as { [K: string]: any })
 const selectingShapes = ref([] as ShapeModel<Group | any, ShapeConfig>[] | undefined)
-const currentStartEraseIndex = ref(0)
+const selectingShape = reactive({
+  id: null,
+  groupName: '',
+  currentStartEraseIndex: 0
+})
 
 onMounted(() => {
   editor = new Pikaso({
@@ -52,6 +62,7 @@ onMounted(() => {
 
 const shortCut = () => ({
   board: editor.board,
+  stage: editor.board.stage,
   groups: editor.board.groups,
   allShapes: editor.board.shapes.filter((i) => i.type !== 'group'),
   pencil: editor.shapes.pencil,
@@ -73,6 +84,67 @@ const stopDrawing = () => {
   isDrawing.value = false
 }
 
+const onDrawing = () => {
+  if (!selectingShape.groupName || typeof selectingShape.id !== 'number') return
+
+  const { stage, groups, allShapes, pencil } = shortCut()
+
+  const selectedGroups = allShapes.filter(
+    (i) => i.group === selectingShape.groupName || i.node._id === selectingShape.id
+  )
+
+  tempGroupAllShape.value = {
+    ...tempGroupAllShape.value,
+    [selectingShape.groupName]: selectedGroups
+  }
+  groups.ungroup(selectingShape.groupName)
+  selectingShapes.value = selectedGroups
+  selectingShape.currentStartEraseIndex = allShapes.length - 1
+
+  pencil.draw({
+    stroke: 'blue',
+    strokeWidth: 15
+  })
+  isDrawing.value = true
+
+  // stage.on(EVENT_NAMES.MOUSEDOWN_TOUCHSTART, () => (isDragging.value = true))
+  // stage.on(EVENT_NAMES.MOUSEMOVE, (e) => {
+  //   if (isDragging.value && e.target._id === selectedShapeId) {
+  //     console.log(111)
+  //     pencil.draw({
+  //       stroke: 'blue',
+  //       strokeWidth: 15
+  //     })
+  //     isDrawing.value = true
+  //   } else {
+  //     console.log(222)
+  //     // stopDrawing()
+  //   }
+  // })
+  // stage.on(EVENT_NAMES.MOUSEUP_TOUCHEND, () => (isDragging.value = false))
+}
+
+const onEndDrawing = () => {
+  if (!selectingShape.groupName) return
+
+  const { stage, allShapes, pencil } = shortCut()
+
+  pencil?.stopDrawing()
+
+  const newLines = [] as typeof allShapes
+  let countingShapeIndex = allShapes.length - 1
+  while (countingShapeIndex > selectingShape.currentStartEraseIndex) {
+    newLines.push(allShapes[countingShapeIndex])
+    countingShapeIndex--
+  }
+
+  attachGroup(selectingShape.groupName, [...((selectingShapes.value || []) as any), ...newLines])
+
+  // stage.off(EVENT_NAMES.MOUSEDOWN_TOUCHSTART)
+  // stage.off(EVENT_NAMES.MOUSEMOVE)
+  // stage.off(EVENT_NAMES.MOUSEUP_TOUCHEND)
+}
+
 const onErase = (_e: unknown, groupName = ERASER_GROUP) => {
   const selectedShape = selectingShapes.value?.[0]
   if (!selectedShape) {
@@ -88,51 +160,22 @@ const onErase = (_e: unknown, groupName = ERASER_GROUP) => {
       ? selectedShape.name
       : createGroupName(groupName, selectedShapeId)
 
-  const { groups, allShapes, pencil } = shortCut()
+  selectingShape.id = selectedShapeId
+  selectingShape.groupName = selectedGroupName
+
   isDrawing.value = !isDrawing.value
+}
 
-  if (isDrawing.value) {
-    const selectedGroups = allShapes.filter(
-      (i) => i.group === selectedGroupName || i.node._id === selectedShapeId
-    )
-
-    tempGroupAllShape.value = {
-      ...tempGroupAllShape.value,
-      [selectedGroupName]: selectedGroups
+watch(
+  () => isDrawing.value,
+  (newVal) => {
+    if (newVal) {
+      onDrawing()
+    } else {
+      onEndDrawing()
     }
-    groups.ungroup(selectedGroupName)
-    selectingShapes.value = selectedGroups
-    currentStartEraseIndex.value = allShapes.length - 1
-
-    pencil.draw({
-      stroke: 'blue',
-      strokeWidth: 15
-    })
-    isDrawing.value = true
-  } else {
-    pencil?.stopDrawing()
-
-    const newLines = [] as typeof allShapes
-    let countingShapeIndex = allShapes.length - 1
-    while (countingShapeIndex > currentStartEraseIndex.value) {
-      newLines.push(allShapes[countingShapeIndex])
-      countingShapeIndex--
-    }
-
-    attachGroup(selectedGroupName, [...((selectingShapes.value || []) as any), ...newLines])
   }
-}
-
-const onGrouping = () => {
-  stopDrawing()
-  attachGroup()
-}
-
-const onUnGroup = () => {
-  stopDrawing()
-  const { groups } = shortCut()
-  groups.ungroup(ERASER_GROUP)
-}
+)
 </script>
 
 <style>
