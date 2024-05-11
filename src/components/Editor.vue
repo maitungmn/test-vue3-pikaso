@@ -11,16 +11,18 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import Pikaso, { PolygonModel, ShapeModel } from 'pikaso'
+import Pikaso, { PolygonModel, ShapeModel, type Group, type ShapeConfig } from 'pikaso'
 
 let editor: Pikaso
 let polygon: PolygonModel
+let polygon2: PolygonModel
 
 const ERASER_GROUP = 'ERASER_GROUP'
 
 const root = ref(undefined)
 const isDrawing = ref(false)
 const tempGroupAllShape = ref({} as { [K: string]: any })
+const selectingShapes = ref([] as ShapeModel<Group | any, ShapeConfig>[] | undefined)
 
 onMounted(() => {
   editor = new Pikaso({
@@ -28,7 +30,7 @@ onMounted(() => {
   })
 
   editor.on('selection:change', (e) => {
-    console.log(e)
+    selectingShapes.value = e.shapes
   })
 
   polygon = editor.shapes.polygon.insert({
@@ -37,6 +39,13 @@ onMounted(() => {
     radius: 90,
     sides: 6,
     fill: 'tomato'
+  })
+  polygon2 = editor.shapes.polygon.insert({
+    x: 450,
+    y: 450,
+    radius: 90,
+    sides: 6,
+    fill: 'brown'
   })
 })
 
@@ -47,6 +56,8 @@ const shortCut = () => ({
   pencil: editor.shapes.pencil,
   polygon
 })
+
+const createGroupName = (groupName = '', id = '') => `${groupName}_${id}`
 
 const attachGroup = (groupName = ERASER_GROUP, customShapes: ShapeModel[] = []) => {
   const { groups, allShapes } = shortCut()
@@ -61,16 +72,35 @@ const stopDrawing = () => {
 }
 
 const onErase = (_e, groupName = ERASER_GROUP) => {
+  const selectedShape = selectingShapes.value?.[0]
+  if (!selectedShape) {
+    stopDrawing()
+    return
+  }
+  const selectedShapeId = selectedShape.node._id
+
+  selectedShape.node.draggable(false)
+
+  const selectedGroupName =
+    selectedShape.type === 'group' && selectedShape.name
+      ? selectedShape.name
+      : createGroupName(groupName, selectedShapeId)
+
   const { groups, allShapes, pencil } = shortCut()
   isDrawing.value = !isDrawing.value
-  // console.log(allShapes)
 
   if (isDrawing.value) {
+    const selectedGroups = allShapes.filter(
+      (i) => i.group === selectedGroupName || i.node._id === selectedShapeId
+    )
+
     tempGroupAllShape.value = {
       ...tempGroupAllShape.value,
-      [groupName]: allShapes.filter((i) => i.group === groupName || i.type === 'polygon')
+      [selectedGroupName]: selectedGroups
     }
-    groups.ungroup(groupName)
+    groups.ungroup(selectedGroupName)
+    selectingShapes.value = selectedGroups
+
     pencil.draw({
       stroke: 'blue',
       strokeWidth: 15
@@ -78,7 +108,10 @@ const onErase = (_e, groupName = ERASER_GROUP) => {
     isDrawing.value = true
   } else {
     pencil?.stopDrawing()
-    attachGroup(groupName, [...tempGroupAllShape.value[groupName], allShapes[allShapes.length - 1]])
+    attachGroup(selectedGroupName, [
+      ...((selectingShapes.value || []) as any),
+      allShapes[allShapes.length - 1]
+    ])
   }
 }
 
