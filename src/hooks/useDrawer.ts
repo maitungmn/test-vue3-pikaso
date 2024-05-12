@@ -100,10 +100,7 @@ const drawer = (editor: Pikaso) => {
     }
 
     selectingShape.currentStartEraseIndex = allShapes.length - 1
-    console.log("===selectingShapes.value ", selectingShapes.value)
-    console.log("===selectingShape.groupName", selectingShape.groupName)
     groups.ungroup(selectingShape.groupName)
-    console.log("===groups", groups)
     board.selection.deselectAll()
 
     stopActiveDrawing()
@@ -165,6 +162,14 @@ const drawer = (editor: Pikaso) => {
     isDrawing.value = !isDrawing.value
   }
 
+  const checkInRange = (x: number, y: number) => {
+    const range = selectingShape.range
+    if (!range) return
+    const isX = x < range.xMax && x > range.xMin
+    const isY = y < range.yMax && y > range.yMin
+    return isX && isY
+  }
+
   const onMouseStart = (e) => {
     // onDrawing()
     isDragging.value = true
@@ -175,13 +180,25 @@ const drawer = (editor: Pikaso) => {
   }
 
   const onMouseMoving = (e: any) => {
-    const { stage } = shortCut()
-    const range = selectingShape.range
+    const { stage, board, allShapes } = shortCut()
     const mousePos = stage.getPointerPosition()
-    if (!range || !mousePos) return
-    const isX = mousePos.x <= range.xMax && mousePos.x >= range.xMin
-    const isY = mousePos.y <= range.yMax && mousePos.y >= range.yMin
-    const isMovingInsideShape = isX && isY
+    if (!mousePos) return
+    const isMovingInsideShape = checkInRange(mousePos.x, mousePos.y)
+
+    // if (!isDragging.value) return
+
+    if (!allShapes.length) return
+    const lastLine = allShapes[allShapes.length - 1]
+    const points = lastLine.node.attrs.points
+    if (!points?.length) return
+    let pointsLastIndex = points.length - 1
+    while (pointsLastIndex >= 0 && !checkInRange(points[pointsLastIndex - 1], points[pointsLastIndex])) {
+      points.pop()
+      points.pop()
+      pointsLastIndex -= 2
+    }
+    // console.log("===points", points)
+
     // const es = stage.getIntersection(mousePos as any)
     // console.log("==es", es)
     // const isMovingInsideShape = es?.getClientRect({ relativeTo: es.getStage() as any })
@@ -190,11 +207,13 @@ const drawer = (editor: Pikaso) => {
     // console.log("===realtive", stage.ge)
 
     if (isDragging.value && isMovingInsideShape) {
+
       // console.log(board.activeDrawing)
       // if (!board.activeDrawing) {
-      //   resetLineBrush()
+      //   console.log("INNNNN")
+      //   // resetLineBrush()
       // }
-      console.log(111)
+      // console.log(111)
 
       // resetLineBrush()
 
@@ -203,6 +222,10 @@ const drawer = (editor: Pikaso) => {
       // lastDrawLine?.node.setAttr("points", [...(lastDrawLine?.node.attrs.points || []), ...points])
     } else if (isDragging.value && !isMovingInsideShape) {
       console.log(222)
+
+
+      // console.log("===allShapes", allShapes)
+      // lineDrawer.stopDrawing()
       // console.log(e.target._id)
       // console.log(selectingShape.id)
       // console.log(e)
