@@ -27,7 +27,6 @@ const EVENT_NAMES = {
 const root = ref(undefined)
 const isDrawing = ref(false)
 const isDragging = ref(false)
-const tempGroupAllShape = ref({} as { [K: string]: any })
 const selectingShapes = ref([] as ShapeModel<Group | any, ShapeConfig>[] | undefined)
 const selectingShape = reactive({
   id: null,
@@ -87,7 +86,8 @@ const stopDrawing = () => {
 const onDrawing = () => {
   if (!selectingShape.groupName || typeof selectingShape.id !== 'number') return
 
-  const { stage, groups, allShapes, pencil } = shortCut()
+  const { board, stage, groups, allShapes, pencil } = shortCut()
+  board.stage.container().style.cursor = 'normal'
 
   const selectedGroups = allShapes.filter(
     (i) => i.group === selectingShape.groupName || i.node._id === selectingShape.id

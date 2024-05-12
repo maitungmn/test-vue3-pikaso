@@ -9,7 +9,14 @@
 
 <script setup lang="ts">
 import { ref, onMounted, reactive, watch } from 'vue'
-import Pikaso, { LineModel, PolygonModel, ShapeModel, type Group, type ShapeConfig } from 'pikaso'
+import Pikaso, {
+  LineModel,
+  PolygonModel,
+  ShapeModel,
+  convertHtmlToText,
+  type Group,
+  type ShapeConfig
+} from 'pikaso'
 
 let editor: Pikaso
 let polygon: PolygonModel
@@ -26,7 +33,6 @@ const EVENT_NAMES = {
 const root = ref(undefined)
 const isDrawing = ref(false)
 const isDragging = ref(false)
-const tempGroupAllShape = ref({} as { [K: string]: any })
 const selectingShapes = ref([] as ShapeModel<Group | any, ShapeConfig>[] | undefined)
 const selectingShape = reactive({
   id: null,

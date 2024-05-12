@@ -1,13 +1,15 @@
 <template>
   <div>
     <!-- <Editor /> -->
-    <EditorPencil />
+    <!-- <EditorPencil /> -->
+    <EditorNew />
   </div>
 </template>
 
 <script setup lang="ts">
 import Editor from './components/Editor.vue'
 import EditorPencil from './components/EditorPencil.vue'
+import EditorNew from './components/EditorNew.vue'
 </script>
 
 <style>
