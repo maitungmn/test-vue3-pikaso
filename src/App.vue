@@ -2,7 +2,9 @@
   <div>
     <!-- <Editor /> -->
     <!-- <EditorPencil /> -->
-    <EditorNew />
+    <!-- <EditorNew /> -->
+    <!-- <KonvaEditor /> -->
+    <EraserRotation />
   </div>
 </template>
 
@@ -10,6 +12,8 @@
 import Editor from './components/Editor.vue'
 import EditorPencil from './components/EditorPencil.vue'
 import EditorNew from './components/EditorNew.vue'
+import KonvaEditor from './components/KonvaEditor.vue'
+import EraserRotation from './components/EraserRotation.vue'
 </script>
 
 <style>
